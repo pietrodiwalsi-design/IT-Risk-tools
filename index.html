@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#FF4500">
+    <title>RiskQuant - IT Risk Quantification (FAIR/Monte Carlo)</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; background: #f5f5f5; }
+        form { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        input, button { padding: 10px; margin: 5px; border: 1px solid #ddd; border-radius: 4px; width: calc(100% - 22px); }
+        button { background: #FF4500; color: white; border: none; cursor: pointer; font-weight: bold; }
+        #results { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        canvas { max-height: 400px; }
+        @media (max-width: 600px) { body { padding: 10px; } input, button { width: 100%; } }
+    </style>
+</head>
+<body>
+    <h1>💰 RiskQuant MVP: Quantify Cyber Risks (FAIR Model)</h1>
+    <p>Input risk params → Monte Carlo sim (1K runs) → ALE, Vulnerability, LEC Curve, ROI.</p>
+    <form id="riskForm">
+        <label>Risk Name: <input id="name" placeholder="Data Breach" required></label>
+        <label>Likelihood (%): <input id="likelihood" type="number" min="0" max="100" step="0.1" placeholder="20" required></label>
+        <label>Impact (€): <input id="impact" type="number" placeholder="1000000" required></label>
+        <label>Frequency (per year): <input id="freq" type="number" step="0.01" placeholder="2" required></label>
+        <label>Controls Strength (0-1): <input id="controls" type="number" min="0" max="1" step="0.01" placeholder="0.1" required></label>
+        <label>Mitigation Cost (€): <input id="mitCost" type="number" placeholder="50000"></label>
+        <button type="submit">Run Simulation</button>
+    </form>
+    <div id="results" style="display:none;">
+        <h2>Results</h2>
+        <p id="summary"></p>
+        <canvas id="lecChart"></canvas>
+        <p id="roi"></p>
+    </div>
+    <script>
+        document.getElementById('riskForm').onsubmit = e => {
+            e.preventDefault();
+            const name = document.getElementById('name').value;
+            const l = parseFloat(document.getElementById('likelihood').value) / 100;
+            const i = parseFloat(document.getElementById('impact').value);
+            const f = parseFloat(document.getElementById('freq').value);
+            const c = parseFloat(document.getElementById('controls').value);
+            const mitCost = parseFloat(document.getElementById('mitCost').value) || 0;
+            const vuln = Math.max(0, l - c); // Threat Capability - Resistance
+            const sims = 1000;
+            let losses = [];
+            for (let n = 0; n < sims; n++) {
+                losses.push(Math.random() < vuln * f ? i * (1 + (Math.random() - 0.5) * 0.2) : 0); // Log-normal variation
+            }
+            losses.sort((a, b) => a - b);
+            const ale = losses.reduce((a, b) => a + b) / sims;
+            const p95 = losses[Math.floor(sims * 0.95)];
+            const p90 = losses[Math.floor(sims * 0.9)];
+            const roi = mitCost > 0 ? ((ale * 0.3) - mitCost) / mitCost : 0; // Assume 30% reduction
+            document.getElementById('summary').innerHTML = `
+                <strong>${name}</strong><br>
+                Vulnerability: ${(vuln * 100).toFixed(1)}%<br>
+                ALE: €${ale.toLocaleString('de-DE', {minimumFractionDigits: 0, maximumFractionDigits: 0})} (95% CI: ≤€${p95.toLocaleString('de-DE')})<br>
+                P90: ≤€${p90.toLocaleString('de-DE')}
+            `;
+            document.getElementById('roi').innerHTML = mitCost > 0 ? `ROI for Mitigation: ${(roi * 100).toFixed(1)}%` : 'Add mitigation cost for ROI.';
+            document.getElementById('results').style.display = 'block';
+            new Chart(document.getElementById('lecChart'), {
+                type: 'line',
+                data: {
+                    labels: ['0%', '25%', '50%', '75%', '90%', '95%'],
+                    datasets: [{
+                        label: 'Loss Exceedance Curve (LEC)',
+                        data: [0, losses[Math.floor(sims * 0.25)], losses[Math.floor(sims * 0.5)], losses[Math.floor(sims * 0.75)], p90, p95],
+                        borderColor: '#FF4500',
+                        backgroundColor: 'rgba(255, 69, 0, 0.1)',
+                        tension: 0.4,
+                        fill: true
+                    }]
+                },
+                options: { responsive: true, scales: { y: { beginAtZero: true } } }
+            });
+        };
+    </script>
+</body>
+</html>
