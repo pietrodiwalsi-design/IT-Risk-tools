@@ -58,35 +58,57 @@ class ITRiskCalculator:
     def __init__(self):
         self.sim_runs = 10000  # Monte Carlo iterations
 
+    # Hard limits — prevent numerical overflow and DoS via extreme inputs
+    MAX_LEF = 1000.0          # >1000 events/year is not a meaningful risk scenario
+    MAX_LM = 1_000_000_000.0  # $1 billion cap
+    MAX_STD = 10.0            # std dev sanity cap
+    MAX_COST = 1_000_000_000.0
+
+    def _validate_fair_inputs(self, lef: float, lm: float, lef_std: float = 0, lm_std: float = 0):
+        """Centralised server-side validation — independent of UI constraints"""
+        if not (0 <= lef <= self.MAX_LEF):
+            raise ValueError(f"LEF must be between 0 and {self.MAX_LEF}")
+        if not (0 < lm <= self.MAX_LM):
+            raise ValueError(f"Loss Magnitude must be > 0 and ≤ ${self.MAX_LM:,.0f}")
+        if not (0 <= lef_std <= self.MAX_STD):
+            raise ValueError(f"LEF Std Dev must be between 0 and {self.MAX_STD}")
+        if not (0 <= lm_std <= self.MAX_STD):
+            raise ValueError(f"LM Std Dev must be between 0 and {self.MAX_STD}")
+
     def fair_risk_calc(self, lef: float, lm: float) -> float:
         """FAIR: Annual Loss Expectancy = LEF * LM"""
-        if lef < 0 or lm < 0:
-            raise ValueError("Inputs must be non-negative")
+        self._validate_fair_inputs(lef, lm)
         ale = lef * lm
-        logger.info(f"FAIR ALE calculated: {ale}")
+        logger.info("FAIR ALE calculated")  # no raw values in logs
         return ale
 
     def monte_carlo_sim(self, lef_mean: float, lef_std: float, lm_mean: float, lm_std: float) -> Dict[str, float]:
         """Monte Carlo simulation for risk variability"""
+        self._validate_fair_inputs(lef_mean, lm_mean, lef_std, lm_std)
         lef_samples = np.random.normal(lef_mean, lef_std, self.sim_runs)
         lm_samples = np.random.lognormal(np.log(lm_mean), lm_std, self.sim_runs)
         lef_samples = np.clip(lef_samples, 0, None)
         lm_samples = np.clip(lm_samples, 0, None)
         ale_samples = lef_samples * lm_samples
+        # Guard against NaN/Inf from numerical edge cases
+        if not np.isfinite(ale_samples).all():
+            ale_samples = np.nan_to_num(ale_samples, nan=0.0, posinf=self.MAX_LM, neginf=0.0)
         return {
-            'mean_ale': np.mean(ale_samples),
-            'std_ale': np.std(ale_samples),
-            'p95_ale': np.percentile(ale_samples, 95),
+            'mean_ale': float(np.mean(ale_samples)),
+            'std_ale': float(np.std(ale_samples)),
+            'p95_ale': float(np.percentile(ale_samples, 95)),
             'samples': ale_samples
         }
 
     def roi_calc(self, current_ale: float, post_control_ale: float, control_cost: float) -> float:
         """ROI = (ALE reduction / cost) * 100"""
+        if not (0 < control_cost <= self.MAX_COST):
+            raise ValueError(f"Control cost must be > 0 and ≤ ${self.MAX_COST:,.0f}")
+        if post_control_ale < 0:
+            raise ValueError("Post-control ALE cannot be negative")
         reduction = current_ale - post_control_ale
-        if control_cost <= 0:
-            raise ValueError("Control cost must be positive")
         roi = (reduction / control_cost) * 100
-        logger.info(f"ROI calculated: {roi}%")
+        logger.info("ROI calculated")
         return roi
 
     def lec_score(self, likelihood: int, exposure: int, consequence: int) -> int:
@@ -304,7 +326,7 @@ with tab_calc:
 
         lef = st.number_input(
             "Loss Event Frequency (LEF) — events per year",
-            min_value=0.0, value=float(val("lef", 1.0)), step=0.1,
+            min_value=0.0, max_value=1000.0, value=float(val("lef", 1.0)), step=0.1,
             help=(
                 "How often do you expect this risk event to occur per year? "
                 "Use decimals for less-than-annual events: "
@@ -313,7 +335,7 @@ with tab_calc:
         )
         lm = st.number_input(
             "Loss Magnitude (LM) — $ impact per event",
-            min_value=0.0, value=float(val("lm", 100000.0)), step=5000.0,
+            min_value=1.0, max_value=1_000_000_000.0, value=float(val("lm", 100000.0)), step=5000.0,
             help=(
                 "What is the average financial impact when this event occurs? "
                 "Include direct costs (recovery, fines, legal) and indirect costs "
@@ -324,7 +346,7 @@ with tab_calc:
         st.markdown("**Uncertainty (for Monte Carlo)**")
         lef_std = st.number_input(
             "LEF Std Dev — frequency uncertainty",
-            min_value=0.0, value=float(val("lef_std", 0.5)), step=0.05,
+            min_value=0.0, max_value=10.0, value=float(val("lef_std", 0.5)), step=0.05,
             help=(
                 "How uncertain are you about the frequency? "
                 "Low certainty (new threat) → higher value (e.g. 0.4). "
@@ -334,7 +356,7 @@ with tab_calc:
         )
         lm_std = st.number_input(
             "LM Std Dev — loss uncertainty",
-            min_value=0.0, value=float(val("lm_std", 0.2)), step=0.05,
+            min_value=0.0, max_value=10.0, value=float(val("lm_std", 0.2)), step=0.05,
             help=(
                 "How uncertain are you about the loss magnitude? "
                 "Cyber losses are often skewed (small events common, huge events rare). "
@@ -349,7 +371,7 @@ with tab_calc:
 
         control_cost = st.number_input(
             "Control Cost ($) — annual cost of the mitigation",
-            min_value=1.0, value=float(val("control_cost", 50000.0)), step=1000.0,
+            min_value=1.0, max_value=1_000_000_000.0, value=float(val("control_cost", 50000.0)), step=1000.0,
             help=(
                 "Total annual cost to implement and run the control. "
                 "Include licensing, staff time, training, and maintenance. "
@@ -358,7 +380,7 @@ with tab_calc:
         )
         post_ale = st.number_input(
             "Post-Control ALE ($) — expected ALE after control is applied",
-            min_value=0.0, value=float(val("post_ale", 50000.0)), step=5000.0,
+            min_value=0.0, max_value=1_000_000_000.0, value=float(val("post_ale", 50000.0)), step=5000.0,
             help=(
                 "What will the Annual Loss Expectancy be *after* the control is in place? "
                 "If the control eliminates the risk entirely, enter 0. "
