@@ -21,6 +21,7 @@ st.set_page_config(
 # ─── Pre-built example scenarios ──────────────────────────────────────────────
 EXAMPLES = {
     "— Select a scenario —": None,
+    # ── Original scenarios ─────────────────────────────────────────────────
     "🎣 Phishing Attack (Medium Risk)": {
         "lef": 0.2, "lm": 250000.0, "lef_std": 0.1, "lm_std": 0.3,
         "control_cost": 15000.0, "post_ale": 75000.0,
@@ -28,7 +29,7 @@ EXAMPLES = {
         "description": (
             "An employee clicks a malicious link leading to a data leak. "
             "Frequency is low but impact is significant. "
-            "A **$15,000 security training programme** is the proposed control."
+            "A **$15,000 security awareness training programme** is the proposed control."
         ),
     },
     "💥 DDoS on E-Commerce Site (High Volatility)": {
@@ -47,7 +48,48 @@ EXAMPLES = {
         "likelihood": 3, "exposure": 5, "consequence": 10,
         "description": (
             "A rogue employee steals sensitive data. Rare but potentially catastrophic. "
-            "**$50,000 in monitoring tools** is the proposed control."
+            "**$50,000 in user behaviour analytics & monitoring tools** is the proposed control."
+        ),
+    },
+    # ── Added scenarios (v2.0) ──────────────────────────────────────────────
+    "🔐 Ransomware Attack (Medium Enterprise)": {
+        "lef": 0.3, "lm": 750000.0, "lef_std": 0.2, "lm_std": 0.4,
+        "control_cost": 80000.0, "post_ale": 90000.0,
+        "likelihood": 6, "exposure": 8, "consequence": 9,
+        "description": (
+            "Ransomware encrypts critical systems, causing operational shutdown and extortion demands. "
+            "Typical for mid-sized enterprises with mixed patch levels. "
+            "**$80,000/year in EDR, backups, and incident response retainer** is evaluated."
+        ),
+    },
+    "☁️ Cloud Misconfiguration / Data Exposure": {
+        "lef": 0.5, "lm": 400000.0, "lef_std": 0.3, "lm_std": 0.35,
+        "control_cost": 35000.0, "post_ale": 60000.0,
+        "likelihood": 7, "exposure": 9, "consequence": 8,
+        "description": (
+            "A misconfigured S3 bucket or Azure storage account exposes sensitive customer or "
+            "financial data to the public internet. GDPR fines and reputational damage are major drivers. "
+            "**$35,000/year Cloud Security Posture Management (CSPM) tool** is the proposed control."
+        ),
+    },
+    "🏦 Third-Party / Supplier Failure": {
+        "lef": 0.4, "lm": 300000.0, "lef_std": 0.25, "lm_std": 0.3,
+        "control_cost": 25000.0, "post_ale": 80000.0,
+        "likelihood": 5, "exposure": 7, "consequence": 8,
+        "description": (
+            "A critical third-party IT or data supplier suffers a breach or outage that cascades "
+            "into your organisation. Relevant for insurers with outsourced policy admin or claims systems. "
+            "**$25,000/year third-party risk management programme & contractual SLAs** evaluated."
+        ),
+    },
+    "🔑 Privileged Access Compromise": {
+        "lef": 0.15, "lm": 600000.0, "lef_std": 0.1, "lm_std": 0.2,
+        "control_cost": 60000.0, "post_ale": 80000.0,
+        "likelihood": 4, "exposure": 6, "consequence": 10,
+        "description": (
+            "An attacker gains admin or privileged credentials (via credential stuffing, social engineering, "
+            "or stolen tokens) and moves laterally across critical systems. "
+            "**$60,000/year Privileged Access Management (PAM) solution + MFA enforcement** evaluated."
         ),
     },
 }
@@ -522,7 +564,67 @@ with tab_calc:
                 "**Right chart**: Summary metrics — red = high risk / negative ROI, green = low risk / good ROI."
             )
 
-            # ── Scenario summary ──────────────────────────────────────────
+            # ── Inherent vs Residual Risk ──────────────────────────────────
+            st.divider()
+            st.subheader("⚖️ Inherent vs. Residual Risk")
+            st.caption("Inherent = risk before any controls. Residual = risk after the proposed control is applied.")
+
+            residual_lef = lef * (post_ale / ale) if ale > 0 else lef
+            residual_lef = max(residual_lef, 0.0)
+            ale_reduction_pct = ((ale - post_ale) / ale * 100) if ale > 0 else 0
+            p95_residual_estimate = sim['p95_ale'] * (post_ale / ale) if ale > 0 else sim['p95_ale']
+            lec_residual = max(1, round(lec * (post_ale / ale))) if ale > 0 else lec
+            lec_residual_label, _, _ = lec_band(lec_residual)
+
+            ir_col1, ir_col2, ir_col3 = st.columns([2, 1, 2])
+            with ir_col1:
+                st.markdown("**🔴 Inherent Risk** *(no controls)*")
+                st.metric("ALE", f"${ale:,.0f}")
+                st.metric("P95 ALE", f"${sim['p95_ale']:,.0f}")
+                st.metric("LEC Score", f"{lec} — {lec_label.split(' ', 1)[-1]}")
+            with ir_col2:
+                st.markdown("&nbsp;", unsafe_allow_html=True)
+                st.markdown("&nbsp;", unsafe_allow_html=True)
+                st.markdown("&nbsp;", unsafe_allow_html=True)
+                st.markdown("<div style='text-align:center;font-size:2rem;padding-top:1.5rem'>→</div>", unsafe_allow_html=True)
+                delta_color = "green" if ale_reduction_pct > 0 else "red"
+                st.markdown(f"<div style='text-align:center;color:{delta_color};font-weight:bold'>▼ {ale_reduction_pct:.0f}%</div>", unsafe_allow_html=True)
+            with ir_col3:
+                st.markdown("**🟢 Residual Risk** *(after control)*")
+                st.metric("ALE", f"${post_ale:,.0f}", delta=f"-${ale - post_ale:,.0f}")
+                st.metric("P95 ALE (est.)", f"${p95_residual_estimate:,.0f}", delta=f"-${sim['p95_ale'] - p95_residual_estimate:,.0f}")
+                st.metric("LEC Score (est.)", f"{lec_residual} — {lec_residual_label.split(' ', 1)[-1]}")
+
+            # ── Auto-generated narrative ───────────────────────────────────
+            st.divider()
+            st.subheader("📝 Executive Summary")
+            scenario_name = selected_example if selected_example != "— Select a scenario —" else "This risk scenario"
+            severity_word = "low" if lec < 100 else ("medium" if lec < 500 else "high")
+            roi_word = "strong" if roi >= 200 else ("good" if roi >= 100 else ("marginal" if roi >= 0 else "negative"))
+            control_verdict = (
+                "The proposed control is a clear investment — it saves significantly more than it costs."
+                if roi >= 100 else (
+                    "The proposed control shows marginal return. Consider whether a more cost-effective alternative exists."
+                    if roi >= 0 else
+                    "The proposed control costs more than the risk it addresses. Reassess control design or scope."
+                )
+            )
+            narrative = (
+                f"**{scenario_name.strip('🎣💥🕵️🔐☁️🏦🔑 ')}** carries an expected annual loss of "
+                f"**${ale:,.0f}**, with a 5% chance of losses exceeding **${sim['p95_ale']:,.0f}** in any given year "
+                f"(Monte Carlo mean: ${sim['mean_ale']:,.0f}). "
+                f"Overall risk severity is rated **{severity_word.upper()}** (LEC score: {lec}). "
+                f"The proposed control requires an annual investment of **${control_cost:,.0f}** and is projected to "
+                f"reduce expected annual losses by **{ale_reduction_pct:.0f}%**, from ${ale:,.0f} to ${post_ale:,.0f}, "
+                f"delivering a **{roi:.0f}% ROI** ({roi_word} return). "
+                f"{control_verdict}"
+            )
+            st.info(narrative)
+            if st.button("📋 Copy to clipboard", key="copy_narrative"):
+                st.code(narrative.replace("**", ""), language=None)
+                st.caption("Select all and copy the text above.")
+
+            # ── Scenario summary + export ──────────────────────────────────
             st.divider()
             st.subheader("📋 Scenario Summary")
             summary_md = f"""
@@ -530,16 +632,53 @@ with tab_calc:
 |--------|-------|
 | Loss Event Frequency | {lef} events/year |
 | Loss Magnitude | ${lm:,.0f} per event |
-| **FAIR ALE** | **${ale:,.0f}/year** |
+| **FAIR ALE (Inherent)** | **${ale:,.0f}/year** |
 | Monte Carlo Mean ALE | ${sim['mean_ale']:,.0f}/year |
 | Monte Carlo P95 ALE | ${sim['p95_ale']:,.0f}/year |
 | Control Cost | ${control_cost:,.0f}/year |
-| Post-Control ALE | ${post_ale:,.0f}/year |
+| **Post-Control ALE (Residual)** | **${post_ale:,.0f}/year** |
+| ALE Reduction | {ale_reduction_pct:.0f}% |
 | **Control ROI** | **{roi:.1f}% — {roi_label}** |
-| LEC Score | {lec} — {lec_label} |
+| LEC Score (Inherent) | {lec} — {lec_label} |
+| LEC Score (Residual est.) | {lec_residual} — {lec_residual_label} |
             """
             st.markdown(summary_md)
-            st.caption("💡 Tip: Take a screenshot of this table for your risk register or board report.")
+
+            # ── CSV Export ────────────────────────────────────────────────
+            import csv, io
+            csv_buffer = io.StringIO()
+            writer = csv.writer(csv_buffer)
+            writer.writerow(["IT Risk Tool — Scenario Export", ""])
+            writer.writerow(["Scenario", scenario_name.replace('**', '')])
+            writer.writerow([])
+            writer.writerow(["Metric", "Value"])
+            writer.writerow(["Loss Event Frequency (LEF)", lef])
+            writer.writerow(["Loss Magnitude (LM)", f"${lm:,.0f}"])
+            writer.writerow(["FAIR ALE (Inherent)", f"${ale:,.0f}"])
+            writer.writerow(["Monte Carlo Mean ALE", f"${sim['mean_ale']:,.0f}"])
+            writer.writerow(["Monte Carlo P95 ALE", f"${sim['p95_ale']:,.0f}"])
+            writer.writerow(["Monte Carlo Std Dev", f"${sim['std_ale']:,.0f}"])
+            writer.writerow(["Control Cost", f"${control_cost:,.0f}"])
+            writer.writerow(["Post-Control ALE (Residual)", f"${post_ale:,.0f}"])
+            writer.writerow(["ALE Reduction", f"{ale_reduction_pct:.0f}%"])
+            writer.writerow(["Control ROI", f"{roi:.1f}%"])
+            writer.writerow(["ROI Rating", roi_label])
+            writer.writerow(["LEC Score (Inherent)", lec])
+            writer.writerow(["LEC Rating (Inherent)", lec_label])
+            writer.writerow(["LEC Score (Residual est.)", lec_residual])
+            writer.writerow(["LEC Rating (Residual est.)", lec_residual_label])
+            writer.writerow([])
+            writer.writerow(["Executive Summary", narrative.replace('**', '')])
+            csv_data = csv_buffer.getvalue()
+
+            st.download_button(
+                label="⬇️ Download Results as CSV",
+                data=csv_data,
+                file_name="it_risk_scenario_export.csv",
+                mime="text/csv",
+                help="Download a CSV summary of this scenario — import into Excel or your risk register.",
+            )
+            st.caption("💡 Tip: Use the CSV export to build a risk register in Excel, or paste the executive summary into a board report.")
 
         except ValueError as e:
             st.error(f"⚠️ Input error: {e}")
