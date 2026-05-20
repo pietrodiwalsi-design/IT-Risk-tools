@@ -114,8 +114,8 @@ class ITRiskCalculator:
             raise ValueError(f"Loss Magnitude must be > 0 and ≤ ${self.MAX_LM:,.0f}")
         if not (0 <= lef_std <= self.MAX_STD):
             raise ValueError(f"LEF Std Dev must be between 0 and {self.MAX_STD}")
-        if not (0 <= lm_std <= self.MAX_STD):
-            raise ValueError(f"LM Std Dev must be between 0 and {self.MAX_STD}")
+        if not (0 <= lm_std <= 2.0):
+            raise ValueError(f"LM CV must be between 0 and 2.0")
 
     def fair_risk_calc(self, lef: float, lm: float) -> float:
         """FAIR: Annual Loss Expectancy = LEF * LM"""
@@ -128,7 +128,15 @@ class ITRiskCalculator:
         """Monte Carlo simulation for risk variability"""
         self._validate_fair_inputs(lef_mean, lm_mean, lef_std, lm_std)
         lef_samples = np.random.normal(lef_mean, lef_std, self.sim_runs)
-        lm_samples = np.random.lognormal(np.log(lm_mean), lm_std, self.sim_runs)
+        # Correct lognormal parameterisation for CV (coefficient of variation)
+        cv = lm_std
+        if cv > 0:
+            sigma = np.sqrt(np.log(1 + cv**2))
+            mu = np.log(lm_mean) - 0.5 * sigma**2
+        else:
+            sigma = 0.0
+            mu = np.log(lm_mean)
+        lm_samples = np.random.lognormal(mu, sigma, self.sim_runs)
         lef_samples = np.clip(lef_samples, 0, None)
         lm_samples = np.clip(lm_samples, 0, None)
         ale_samples = lef_samples * lm_samples
@@ -397,13 +405,13 @@ with tab_calc:
             ),
         )
         lm_std = st.number_input(
-            "LM Std Dev — loss uncertainty",
-            min_value=0.0, max_value=10.0, value=float(val("lm_std", 0.2)), step=0.05,
+            "Loss Magnitude CV — coefficient of variation (uncertainty as % of mean)",
+            min_value=0.0, max_value=2.0, value=float(val("lm_std", 0.2)), step=0.05,
             help=(
-                "How uncertain are you about the loss magnitude? "
-                "Cyber losses are often skewed (small events common, huge events rare). "
-                "0.2 = moderate uncertainty, 0.5 = high uncertainty. "
-                "Loss magnitude uses a log-normal distribution to model skewness."
+                "How uncertain is the loss magnitude, expressed as a fraction of the mean. "
+                "0.2 = 20% uncertainty (moderate), 0.5 = 50% uncertainty (high). "
+                "A log-normal distribution is used to model skewed cyber losses. "
+                "Most scenarios: 0.2–0.5."
             ),
         )
 
