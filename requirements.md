@@ -1,5 +1,5 @@
 **App Name**: RiskQuant  
-**Version**: 1.1 MVP (Updated with CRQ/FAIR Workflow)  
+**Version**: 1.2 MVP (Updated with Prioritization Focus)  
 **Owner/Stakeholder**: Peter Van Walsem (IT Risk Manager, Rotterdam CET; insurance/finance focus).  
 **Business Goal**: SaaS/PWA tool to quantify IT/cyber risks into financial terms (e.g., € loss ranges, ROI for mitigations). Use FAIR model/Monte Carlo for probabilistic forecasts. Targets insurers/teams for audits/prioritization. Freemium (basic sims free; premium integrations $99/user/mo).  
 **Target Users**: Risk managers (you), CISO teams, execs (financial narratives).  
@@ -8,7 +8,7 @@
 **Constraints**: <5s sim runs; no real-time telemetry (MVP inputs); CET timezone.  
 
 #### 1. Functional Requirements (Core Features)
-Refined with CRQ/FAIR workflow: Scenario/BIA, LEF (TEF/Susceptibility), Loss Magnitude (Primary/Secondary), Simulations, Outputs (ALE/LEC/ROI). Structured as user stories.
+Refined with CRQ/FAIR workflow and organizational prioritization: Quantify risks for processes/assets to rank scenarios (e.g., highest ALE first). Structured as user stories.
 
 - **Must-Have (MVP Essentials—Build First)**:
   - **Step 1: Risk Scenario & Asset Identification**: As a risk manager, I want to define scenario (e.g., "malware compromising data integrity") and perform BIA (asset value, business purpose), so I frame context. (Forms for scenario description, asset financial value via SME estimates.)
@@ -20,12 +20,13 @@ Refined with CRQ/FAIR workflow: Scenario/BIA, LEF (TEF/Susceptibility), Loss Mag
   - **Financial Impact Assessment**: As an exec, I want categorization of Primary/Secondary losses with confidence intervals, so I see defensible € ranges. (Outputs: Lower/upper bounds, e.g., "€500K-2M at 95% CI".)
   - **Step 5: Executive Outputs**: As a decision-maker, I want ALE (annual expected loss, e.g., €1.4M-3M), LEC (prob > threshold), and ROI calculator (mit cost vs. avoided losses, e.g., 248% for €300K upgrade), so I communicate/prioritize. (What-if toggle for scenarios.)
   - **Scenario Analysis**: As a planner, I want "what-if" sims for attacks/breaches and ROI calcs (control cost vs. avoided losses), so I prioritize projects. (Dynamic register: Map tech risks to business impacts.)
-  - **Reporting/Visualization**: As a decision-maker, I want Loss Exceedance Curve (LEC: prob losses > € thresholds), dashboards (qualitative to financial, trends, peer comparisons), so I communicate clearly. (Chart.js for LEC/curves; export PDF/CSV.)
+  - **Organizational Prioritization**: As a CISO, I want a risk register that ranks scenarios by quantified metrics (e.g., ALE, ROI, P95 CI for processes/assets), so I focus on high-impact IT security first (e.g., sort by € exposure for CEO/CFO decisions). (Table view: Scenarios list, sortable by ALE/ROI; dollar figures for processes/assets key.)
+  - **Reporting/Visualization**: As a decision-maker, I want Loss Exceedance Curve (LEC: prob losses > € thresholds), dashboards (qualitative to financial, trends, peer comparisons), so I communicate clearly. (Chart.js for LEC/curves; export PDF/CSV; prioritization dashboard with rankings.)
 
 - **Should-Have (Enhance MVP—Phase 2)**:
   - **Automated Telemetry**: Integrate live feeds (SIEM logs) for real-time inputs.
   - **Advanced Sims**: Dynamic vulnerability derivation; industry benchmarks auto-pull.
-  - **Risk Register**: Maintain/track scenarios over time.
+  - **Risk Register**: Maintain/track scenarios over time with auto-ranking.
 
 - **Could-Have (v1.5—Nice-to-Have)**:
   - **AI Assistance**: SME calibration via prompts; predictive trends.
@@ -39,7 +40,7 @@ Refined with CRQ/FAIR workflow: Scenario/BIA, LEF (TEF/Susceptibility), Loss Mag
 
 #### 2. Non-Functional Requirements (Quality Attributes)
 - **Must-Have**:
-  - **Usability**: Intuitive forms/dashboards; guided inputs (e.g., sliders for likelihood); responsive (desktop/mobile).
+  - **Usability**: Intuitive forms/dashboards; guided inputs (e.g., sliders for likelihood); responsive (desktop/mobile). Prioritization table sortable/filterable.
   - **Performance**: <5s for 1K sims; scalable to 10K (cloud optional).
   - **Accessibility**: WCAG AA (alt text/charts, keyboard nav).
   - **Security/Privacy**: Encrypt inputs; GDPR (no PII storage); audit logs.
@@ -64,11 +65,12 @@ Refined with CRQ/FAIR workflow: Scenario/BIA, LEF (TEF/Susceptibility), Loss Mag
 - **Story 8 (Must: Scenarios/ROI)**: As a planner, I want what-if/ROI, so prioritize. Criteria: Toggle controls → Re-sim; ROI = (avoided - cost)/cost >1.
 - **Story 9 (Must: Outputs)**: As a decision-maker, I want ALE/LEC/ROI, so exec-ready. Criteria: ALE €1.4M-3M; LEC chart >€X prob; ROI 248% example.
 - **Story 10 (Must: Reporting)**: As a decision-maker, I want LEC/dashboards/comparisons, so communicate. Criteria: Chart prob > €X; side-by-side inherent/residual risks.
+- **Story 11 (Must: Prioritization)**: As a CISO, I want risk register ranking (by ALE/ROI/P95 for processes/assets), so I focus on top IT security scenarios first. Criteria: Add multiple scenarios → Sortable table (highest € exposure top); dollar figures for assets/processes.
 
 #### 4. Risks & Mitigations
 - **Risk**: Data inaccuracy (estimates). Mitigate: SME validation prompts; benchmarks.
 - **Risk**: Compute heavy (sims). Mitigate: JS for MVP, Python offload.
 - **Risk**: Scope creep (integrations). Mitigate: MVP manual only.
-- **Success Metrics**: 90% stories pass; sim accuracy vs. FAIR examples; you approve dashboard.
+- **Success Metrics**: 90% stories pass; sim accuracy vs. FAIR examples; you approve dashboard; prioritization ranks 5+ scenarios correctly.
 
-*Draft v1.1—Updated 2026-04-17 with CRQ/FAIR steps (Scenario/BIA, LEF/TEF/Susceptibility, Primary/Secondary, Simulations, Outputs). Approved for MVP.*
+*Draft v1.2—Updated 2026-04-17 with prioritization (risk register ranking by ALE/ROI for IT security scenarios, € figures for processes/assets). Approved for MVP.*
