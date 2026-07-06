@@ -57,6 +57,28 @@ Calculator class + UI + copy in one file makes every UX iteration risky. Split: 
 4. F9: currency select (€/$/£) applied to labels and outputs.
 **Exit criteria:** calculate → adjust a slider → results remain visible with a stale-warning; CSV download does not destroy the view; example state never lies.
 
+### Phase 1.5 — Structure (≈1 day, approved 2026-07-06, do BEFORE Phase 2)
+The current single-file layout is fine for a personal calculator but not for where this
+tool is headed (threat-model → quantified exposure). Three components with different
+life-cycles are interwoven: engine (stable, tested), content (changes often), UI
+(rewritten in Phase 2). Split before rebuilding, so the UI overhaul can never damage
+the calculation core:
+
+1. **Engine extraction:** `dashboard/engine.py` — `ITRiskCalculator` + validation as a
+   pure, UI-free module. `test_monte_carlo.py` runs against it unchanged (regression gate).
+2. **Content extraction:** `dashboard/content.py` — example scenarios + explainer texts.
+3. **`app.py` = UI only** (target < ~350 lines after Phase 2).
+4. **Scenario JSON schema:** `shared/scenario.schema.json` — the `/shared` folder the
+   README has promised since April; foundation for F8 (save/load) and Phase 3 (STRIDE import).
+5. **CI:** GitHub Actions running the test suite on every PR (the test exists; it just
+   never runs automatically). 30 min.
+6. **Model-assumptions doc:** `docs/model-assumptions.md` — distributions, parameters,
+   limits, FAIR alignment (P0 from the 2026-07-05 portfolio review; every number shown
+   to a stakeholder needs a defensible method behind it).
+
+**Exit criteria:** engine importable without Streamlit installed; tests green in CI;
+schema validates all built-in examples; assumptions doc reviewed by Peter.
+
 ### Phase 2 — Flow redesign (2–3 days)
 Restructure Tab 1 as a 4-step stepper (Streamlit-native, no new framework):
 1. **Scenario** — name, description, example/JSON load, method choice (Quick scan | Full quantification) [F5, F8]
@@ -71,4 +93,6 @@ Import STRIDE-tool JSON export → pre-filled scenarios per threat → portfolio
 
 ## 4. Execution proposal
 
-Phase 1 is small and safe enough for a single Moshe mandate with the existing test suite as regression gate (`test_monte_carlo.py` must stay green — engine untouched). Phase 2 gets its own mandate after Peter approves this plan and the stepper sketch; Fable reviews the PR against the exit criteria. Phase 3 waits for the consolidation ADR.
+Phases 1 + 1.5 form a single Moshe mandate with the existing test suite as regression gate (`test_monte_carlo.py` must stay green throughout; engine behaviour unchanged). Phase 2 gets its own mandate after Peter approves the stepper sketch; Fable reviews each PR against the exit criteria. Phase 3 waits for the consolidation ADR.
+
+*Plan approved by Peter on 2026-07-06 (incl. Phase 1.5). Execution queued for Moshe after completion of the eu-ai-act golden-set/xAI mandate.*
