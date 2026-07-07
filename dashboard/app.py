@@ -79,15 +79,13 @@ with st.sidebar:
 
     st.divider()
 
-    st.markdown("### 📖 Methodologies")
-    with st.expander("FAIR (Quantitative)"):
-        st.markdown(METHODOLOGY_FAIR)
-    with st.expander("Monte Carlo Simulation"):
-        st.markdown(METHODOLOGY_MONTE_CARLO)
-    with st.expander("LEC (Qualitative)"):
-        st.markdown(METHODOLOGY_LEC)
-    with st.expander("ROI of Controls"):
-        st.markdown(METHODOLOGY_ROI)
+    # F6: methodology explainers moved to the "How to Use" tab (where the
+    # step-by-step guide already covers the same FAIR/LEC/ROI concepts in
+    # context) — having them duplicated here too made the sidebar read as
+    # a theory library instead of navigation, and made the same explanation
+    # appear twice on screen at once while using the calculator. See
+    # docs/ux-review-and-improvement-plan.md §2 (F6).
+    st.caption("📖 Need the theory behind FAIR / Monte Carlo / LEC / ROI? See the **How to Use** tab.")
 
     st.divider()
     st.markdown("### 💡 Tips")
@@ -554,3 +552,16 @@ with tab_guide:
         "You don't need a background in risk management — just follow the steps."
     )
     st.markdown(HOW_TO_USE_MD)
+
+    # F6: methodology theory lives here now (single source), not duplicated
+    # in the sidebar on every tab. See docs/ux-review-and-improvement-plan.md.
+    st.divider()
+    st.subheader("📖 Methodology Reference")
+    with st.expander("FAIR (Quantitative)"):
+        st.markdown(METHODOLOGY_FAIR)
+    with st.expander("Monte Carlo Simulation"):
+        st.markdown(METHODOLOGY_MONTE_CARLO)
+    with st.expander("LEC (Qualitative)"):
+        st.markdown(METHODOLOGY_LEC)
+    with st.expander("ROI of Controls"):
+        st.markdown(METHODOLOGY_ROI)
