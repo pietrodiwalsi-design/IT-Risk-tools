@@ -93,8 +93,10 @@ with st.sidebar:
         "Start with an example scenario, then tweak the inputs for your own case. "
         "Use the **P95 ALE** figure for pessimistic/worst-case planning."
     )
-    st.markdown("**LEC Interpretation**")
-    st.markdown("🟢 1–99 → Low | 🟡 100–499 → Medium | 🔴 500+ → High")
+    # F6 follow-up: the LEC score-band legend used to be duplicated here
+    # AND in the How to Use tab's LEC methodology table (content.py,
+    # METHODOLOGY_LEC). Removed from the sidebar — single source of truth
+    # is now the How to Use tab only.
 
     st.divider()
     st.caption("Built with Python + Streamlit | [Source code](https://github.com/pietrodiwalsi-design/IT-Risk-tools)")
