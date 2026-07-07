@@ -5,3 +5,7 @@ __pycache__/
 venv/
 *.egg-info/
 .DS_Store
+
+# User-generated saved assessments (Phase 2 dashboard) -- runtime data,
+# not source. Ephemeral on Render anyway; never belongs in git.
+dashboard/saved_assessments/
