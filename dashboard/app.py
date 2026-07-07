@@ -62,14 +62,20 @@ with st.sidebar:
     st.divider()
 
     # F9: currency selector — applies to all $ labels/outputs on the page.
+    # Uses a stable widget key ("currency_select") bound one-way into
+    # session_state, instead of index=... derived from the same state key
+    # being written back into on every rerun — avoids a fragile
+    # self-referencing widget pattern that can desync under AppTest/reruns.
     st.markdown("### 💱 Currency")
-    st.session_state["currency_label"] = st.selectbox(
+    selected_currency = st.selectbox(
         "Report currency",
         options=list(CURRENCIES.keys()),
+        key="currency_select",
         index=list(CURRENCIES.keys()).index(st.session_state["currency_label"]),
         help="Changes the currency symbol shown in results, charts, and exports. Does not convert values.",
     )
-    CUR = CURRENCIES[st.session_state["currency_label"]]
+    st.session_state["currency_label"] = selected_currency
+    CUR = CURRENCIES[selected_currency]
 
     st.divider()
 
