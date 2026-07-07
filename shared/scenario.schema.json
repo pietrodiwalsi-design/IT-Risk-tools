@@ -1,0 +1,87 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/pietrodiwalsi-design/IT-Risk-tools/shared/scenario.schema.json",
+  "title": "IT Risk Quantification Scenario",
+  "description": "Schema for a single quantified IT risk scenario as used by the FAIR / Monte Carlo / LEC calculator in dashboard/engine.py. Foundation for scenario save/load (F8) and future STRIDE-import (Phase 3): a STRIDE threat model export should be mappable into one object per identified threat that validates against this schema.",
+  "type": "object",
+  "required": ["name", "lef", "lm", "control_cost", "post_ale", "likelihood", "exposure", "consequence"],
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Human-readable scenario name, e.g. 'Ransomware Attack (Medium Enterprise)'.",
+      "minLength": 1
+    },
+    "description": {
+      "type": "string",
+      "description": "Free-text scenario description shown to the user (may include markdown emphasis)."
+    },
+    "currency": {
+      "type": "string",
+      "description": "ISO-4217-style hint for which currency the monetary fields are expressed in.",
+      "enum": ["EUR", "USD", "GBP"],
+      "default": "EUR"
+    },
+    "lef": {
+      "type": "number",
+      "description": "Loss Event Frequency — expected number of events per year.",
+      "minimum": 0,
+      "maximum": 1000
+    },
+    "lm": {
+      "type": "number",
+      "description": "Loss Magnitude — average financial impact per event, in `currency` units.",
+      "exclusiveMinimum": 0,
+      "maximum": 1000000000
+    },
+    "lef_std": {
+      "type": "number",
+      "description": "LEF uncertainty (standard deviation) used for Monte Carlo sampling of the normal-distributed frequency.",
+      "minimum": 0,
+      "maximum": 10,
+      "default": 0.3
+    },
+    "lm_std": {
+      "type": "number",
+      "description": "LM uncertainty expressed as coefficient of variation (CV), used to parameterise the lognormal distribution for Monte Carlo sampling of loss magnitude.",
+      "minimum": 0,
+      "maximum": 2.0,
+      "default": 0.3
+    },
+    "control_cost": {
+      "type": "number",
+      "description": "Annual cost of the proposed mitigating control, in `currency` units.",
+      "exclusiveMinimum": 0,
+      "maximum": 1000000000
+    },
+    "post_ale": {
+      "type": "number",
+      "description": "Expected Annual Loss Expectancy after the control is applied (residual risk), in `currency` units.",
+      "minimum": 0,
+      "maximum": 1000000000
+    },
+    "likelihood": {
+      "type": "integer",
+      "description": "LEC likelihood score.",
+      "minimum": 1,
+      "maximum": 10
+    },
+    "exposure": {
+      "type": "integer",
+      "description": "LEC exposure score.",
+      "minimum": 1,
+      "maximum": 10
+    },
+    "consequence": {
+      "type": "integer",
+      "description": "LEC consequence score.",
+      "minimum": 1,
+      "maximum": 10
+    },
+    "source": {
+      "type": "string",
+      "description": "Optional provenance hint, e.g. 'manual', 'stride-threat-modeler-export', 'built-in-example'.",
+      "default": "manual"
+    }
+  },
+  "additionalProperties": false
+}
